@@ -285,7 +285,7 @@ public abstract class DynamicResourcePool<T> implements Pool<T> {
   @Override
   public T acquire() throws IOException {
     try {
-      return acquire(100  /* no timeout */, TimeUnit.DAYS);
+      return acquire(2  /* no timeout */, TimeUnit.MINUTES);
     } catch (TimeoutException e) {
       // Never should timeout in acquire().
       throw new RuntimeException(e);
