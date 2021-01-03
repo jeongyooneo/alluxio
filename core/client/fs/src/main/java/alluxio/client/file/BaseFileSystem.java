@@ -74,11 +74,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -164,6 +160,13 @@ public class BaseFileSystem implements FileSystem {
       CreateFilePOptions mergedOptions = FileSystemOptions.createFileDefaults(
           mFsContext.getPathConf(path)).toBuilder().mergeFrom(options).build();
       URIStatus status = client.createFile(path, mergedOptions);
+      // report tier info of all blocks composing this file
+      ArrayList<String> tierAliases = new ArrayList<>();
+      status.getBlockIds().forEach(blockId ->
+              status.getBlockInfo(blockId).getLocations().stream()
+                      .map(BlockLocation::getTierAlias)
+                      .forEach(tierAliases::add));
+      LOG.info("Created file {}, tiers {}", path.getPath(), Arrays.toString(tierAliases.toArray()));
       LOG.debug("Created file {}, options: {}", path.getPath(), mergedOptions);
       OutStreamOptions outStreamOptions =
           new OutStreamOptions(mergedOptions, mFsContext.getClientContext(),
