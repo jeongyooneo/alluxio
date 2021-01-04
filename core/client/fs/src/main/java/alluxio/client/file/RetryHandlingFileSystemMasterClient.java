@@ -68,10 +68,7 @@ import alluxio.wire.SyncPointInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import javax.annotation.concurrent.ThreadSafe;
@@ -162,6 +159,15 @@ public final class RetryHandlingFileSystemMasterClient extends AbstractMasterCli
   @Override
   public void completeFile(final AlluxioURI path, final CompleteFilePOptions options)
       throws AlluxioStatusException {
+    // report tier info of all blocks composing this file
+    ArrayList<String> tierAliases = new ArrayList<>();
+    URIStatus status = getStatus(path, GetStatusPOptions.getDefaultInstance());
+    status.getBlockIds().forEach(blockId -> status.getBlockInfo(blockId).getLocations()
+            .forEach(loc -> tierAliases.add("BlockId:" + blockId.toString()
+                    + "-" + loc.getWorkerAddress().getHost()
+                    + "-" + loc.getTierAlias())));
+    RPC_LOG.info("Created (Completed) file {}, tiers {}", path.getPath(), Arrays.toString(tierAliases.toArray()));
+
     retryRPC(() -> mClient.completeFile(CompleteFilePRequest.newBuilder()
         .setPath(getTransportPath(path)).setOptions(options).build()), RPC_LOG, "CompleteFile",
         "path=%s,options=%s", path, options);
@@ -362,3 +368,4 @@ public final class RetryHandlingFileSystemMasterClient extends AbstractMasterCli
     }
   }
 }
+

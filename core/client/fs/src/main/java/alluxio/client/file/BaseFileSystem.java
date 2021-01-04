@@ -160,13 +160,6 @@ public class BaseFileSystem implements FileSystem {
       CreateFilePOptions mergedOptions = FileSystemOptions.createFileDefaults(
           mFsContext.getPathConf(path)).toBuilder().mergeFrom(options).build();
       URIStatus status = client.createFile(path, mergedOptions);
-      // report tier info of all blocks composing this file
-      ArrayList<String> tierAliases = new ArrayList<>();
-      status.getBlockIds().forEach(blockId ->
-              status.getBlockInfo(blockId).getLocations().stream()
-                      .map(BlockLocation::getTierAlias)
-                      .forEach(tierAliases::add));
-      LOG.info("Created file {}, tiers {}", path.getPath(), Arrays.toString(tierAliases.toArray()));
       LOG.debug("Created file {}, options: {}", path.getPath(), mergedOptions);
       OutStreamOptions outStreamOptions =
           new OutStreamOptions(mergedOptions, mFsContext.getClientContext(),
@@ -354,6 +347,13 @@ public class BaseFileSystem implements FileSystem {
             .setAccessMode(Bits.READ)
             .setUpdateTimestamps(options.getUpdateLastAccessTime())
             .build());
+    // report tier info of all blocks composing this file
+    ArrayList<String> tierAliases = new ArrayList<>();
+    status.getBlockIds().forEach(blockId -> status.getBlockInfo(blockId).getLocations()
+            .forEach(loc -> tierAliases.add("BlockId:" + blockId.toString()
+                    + "-" + loc.getWorkerAddress().getHost()
+                    + "-" + loc.getTierAlias())));
+    LOG.info("Opened file {}, tiers {}", path.getPath(), Arrays.toString(tierAliases.toArray()));
     return openFile(status, options);
   }
 
@@ -553,3 +553,4 @@ public class BaseFileSystem implements FileSystem {
     }
   }
 }
+
